@@ -27,22 +27,124 @@ def strConstElement(text: str) -> ET.Element:
     return element("stringConstant", text)
 
 
+class IntegerConstant:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [intConstElement(self.value)]
+
+
+class StringConstant:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [strConstElement(self.value)]
+
+class KeywordConstant:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [keywordElement(self.value)]
+
+class VarNameTerm:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [identifierElement(self.value)]
+
+
+class VarNameWithArrayRefTerm:
+
+    def __init__(self, varNameTerm: VarNameTerm, expression: Expression) -> None:
+        self.varNameTerm = varNameTerm
+        self.expression = expression
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [self.varNameTerm.toXMLElement(), symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
+
+class SubroutineCall:
+    def __init__(self, subroutineName: str, expressionList: ExpressionList, classOrVarName: str = None) -> None:
+        self.subroutineName = subroutineName
+        self.expressionList = expressionList
+        self.classOrVarName = classOrVarName
+
+    def toXMLElements(self) -> List[ET.Element]:
+        ret = []
+        if self.classOrVarName is not None:
+            ret.append(identifierElement(self.classOrVarName))
+            ret.append(symbolElement("."))
+        ret.append(identifierElement(self.subroutineName))
+        ret.append(symbolElement('('))
+        ret.append(self.expressionList.toXMLElement())
+        ret.append(symbolElement(")"))
+        return ret
+
+class ParenthesisTerm:
+    def __init__(self, expression: Expression) -> None:
+        self.expression = expression
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
+
+class UnaryOpTerm:
+
+    def __init__(self, unaryOp: str, term: Term) -> None:
+        self.unaryOp = unaryOp
+        self.term = term
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [keywordElement(self.unaryOp), self.term.toXMLElement()]
+
+class Term:
+    def __init__(self, term: Union[IntegerConstant, StringConstant, KeywordConstant, VarNameTerm, VarNameWithArrayRefTerm, SubroutineCall, ParenthesisTerm, UnaryOpTerm]) -> None:
+        self.term = term
+
+    def toXMLElement(self) -> ET.Element:
+        root = element("term")
+        for elem in self.term.toXMLElements():
+            root.append(elem)
+        return root
+
+class AdditionalTerm:
+    def __init__(
+        self,
+        op: str,
+        term: Term,
+    ) -> None:
+        self.op = op
+        self.term = term
+
+    def toXMLElements(self) -> List[ET.Element]:
+        return [symbolElement(self.op), self.term.toXMLElement()]
+
 class Expression:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, term: Term, terms: List[AdditionalTerm]) -> None:
+        self.term = term
+        self.terms = terms
 
     def toXMLElement(self) -> ET.Element:
         root = element("expression")
-        root.append(keywordElement("let"))
+        root.append(self.term.toXMLElement())
+        for term in self.terms:
+            for elem in term.toXMLElements():
+                root.append(elem)
         return root
 
+class ExpressionList:
+    def __init__(self, expressions: List[Expression]) -> None:
+        self.expressions = expressions
 
-class SubroutineCall:
-    def __init__(self) -> None:
-        pass
-    
-    def toXMLElement(self) -> List[ET.Element]:
-        return []
+    def toXMLElement(self) -> ET.Element:
+        root = element("expressionList")
+        for idx, expression in enumerate(self.expressions):
+            if idx > 0:
+                root.append(symbolElement(","))
+            root.append(expression.toXMLElement())
+        return root
 
 class LetStatement:
     def __init__(self, varName: str, expression: Expression, arrayRefExpression: Expression = None) -> None:
@@ -109,7 +211,8 @@ class DoStatement:
     def toXMLElement(self) -> ET.Element:
         root = element("doStatement")
         root.append(keywordElement("do"))
-        root.append(*SubroutineCall.toXMLElement())
+        for elem in self.subroutineCall.toXMLElements():
+            root.append(elem)
         root.append(symbolElement(";"))
         return root
 
@@ -161,30 +264,31 @@ class Parameter:
         self.type = type
         self.identifier = identifier
 
-    def toXMLElement(self) -> List[ET.Element]:
+    def toXMLElements(self) -> List[ET.Element]:
         return [
             keywordElement(self.type) if self.type in ["int", "char", "boolean"] else identifierElement(self.type), 
             identifierElement(self.identifier)
         ]
 
 class ParameterList:
-    def __init__(self, parameters: List[str]) -> None:
-        self.parameters = []
+
+    def __init__(self, parameters: List[Parameter]) -> None:
+        self.parameters = parameters
 
     def toXMLElement(self) -> ET.Element:
         root = element("parameterList")
         for idx, parameter in enumerate(self.parameters):
             if idx != 0:
                 root.append(symbolElement(","))
-            root.append(parameter)
+            for elem in parameter.toXMLElements():
+                root.append(elem)
         return root
-
 
 class VarDec:
     def __init__(self, type: str, identifiers: List[str]) -> None:
         self.keyword = "var"
         self.type = type
-        self.identifiers = []
+        self.identifiers = identifiers
 
     def toXMLElement(self) -> ET.Element:
         root = element("varDec")
@@ -285,12 +389,10 @@ class CompilationEngine:
         classVarDecs = []
         while (self.tokenizer.isKeyword() and self.tokenizer.keyword() in ["field", "static"]):
             classVarDecs.append(self.compileClassVarDec())
-            self.tokenizer.advance()
 
         subroutineDecs = []
         while (self.tokenizer.isKeyword() and self.tokenizer.keyword() in ["constructor", "function", "method"]):
             subroutineDecs.append(self.compileSubroutine())
-            self.tokenizer.advance()
 
         assert self.tokenizer.symbol() == "}"
         return Class(className, classVarDecs, subroutineDecs)
@@ -316,6 +418,7 @@ class CompilationEngine:
             self.tokenizer.advance()
 
         assert self.tokenizer.symbol() == ';'
+        self.tokenizer.advance()
         return ClassVarDec(sf, type, varNames)
 
     def compileSubroutine(self) -> SubroutineDec:
@@ -346,13 +449,13 @@ class CompilationEngine:
         varDecs = []
         while (self.tokenizer.isKeyword() and self.tokenizer.keyword() == "var"):
             varDecs.append(self.compileVarDec())
-            self.tokenizer.advance()
 
         statements = self.compileStatements()
+
         assert self.tokenizer.symbol() == "}"
+        self.tokenizer.advance()
 
         subroutineBody = SubroutineBody(varDecs, statements)
-
         return SubroutineDec(cfm, type, subroutineName, paramList, subroutineBody)
 
     def compileParameterList(self) -> ParameterList:
@@ -393,10 +496,10 @@ class CompilationEngine:
             self.tokenizer.advance()
 
         assert self.tokenizer.symbol() == ";"
+        self.tokenizer.advance()
         return VarDec(type, varNames)
 
     def compileStatements(self) -> Statements:
-
         sts = []
         while (not (self.tokenizer.isSymbol() and self.tokenizer.symbol == '}')):
             if self.tokenizer.keyword() == "let":
@@ -410,51 +513,91 @@ class CompilationEngine:
             elif self.tokenizer.keyword() == "return":
                 sts.append(self.compileReturn())
             self.tokenizer.advance()
-
         return Statements(sts)
 
     def compileLet(self) -> LetStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "let"
         self.tokenizer.advance()
+        varName = self.tokenizer.identifier()
+        self.tokenizer.advance()
+        arrayRefExpression = None
+        if self.tokenizer.isSymbol() and self.tokenizer.symbol() == '=':
+            expression = self.compileExpression()
+            self.tokenizer.advance()
+        else:
+            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "["
+            self.tokenizer.advance()
+            arrayRefExpression = self.compileExpression()
+            self.tokenizer.advance()
+            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "]"
+            self.tokenizer.advance()
+            expression = self.compileExpression()
+            self.tokenizer.advance()
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
-        return LetStatement()
+        self.tokenizer.advance()
+        return LetStatement(varName, expression, arrayRefExpression)
 
     def compileIf(self) -> IfStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "if"
         self.tokenizer.advance()
-        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
-        return IfStatement()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "("
+        self.tokenizer.advance()
+        expression = self.compileExpression()
+        self.tokenizer.advance()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+        self.tokenizer.advance()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "{"
+        self.tokenizer.advance()
+        statements = self.compileStatements()
+        self.tokenizer.advance()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "}"
+        self.tokenizer.advance()
+
+        elseStatements = None
+        if self.tokenizer.isKeyword() and self.tokenizer.keyword() == 'else':
+            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "{"
+            self.tokenizer.advance()
+            elseStatements = self.compileStatements()
+            self.tokenizer.advance()
+            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "}"
+            self.tokenizer.advance()
+
+        return IfStatement(expression, statements, elseStatements)
 
     def compileWhile(self) -> WhileStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "while"
         self.tokenizer.advance()
+        # TODO
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
         return WhileStatement()
 
     def compileDo(self) -> DoStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "do"
         self.tokenizer.advance()
+        # TODO
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
         return DoStatement()
 
     def compileReturn(self) -> ReturnStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "return"
         self.tokenizer.advance()
+        # TODO
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
         return ReturnStatement()
 
-    def compileExpression(self) -> None:
+    def compileExpression(self) -> Expression:
+        # TODO
         pass
 
-    def compileTerm(self) -> None:
+    def compileTerm(self) -> Term:
+        # TODO
         pass
 
-    def compileExpressionList(self) -> None:
+    def compileExpressionList(self) -> ExpressionList:
+        # TODO
         pass
 
     def compile(self) -> None:
-        assert self.tokenizer.hasMoreTokens()
-
         while self.tokenizer.hasMoreTokens():
             self.tokenizer.advance()
             if self.tokenizer.tokenType() == "class":
