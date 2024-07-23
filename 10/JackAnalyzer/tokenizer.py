@@ -3,6 +3,7 @@
 
 from typing import List
 from enum import Enum
+from xml.etree import ElementTree as ET
 
 class TokenType(Enum):
     KEYWORD = "keyword"
@@ -87,6 +88,11 @@ class Token:
     def __repr__(self) -> str:
         return f"Token(type={self.tokenType()}, value='{self.val}')"
 
+    def toXMLElement(self) -> ET.Element:
+        elem = ET.Element(self.tokenType().value)
+        elem.text = " " + self.value() + " "
+        return elem
+
 class Keyword(Enum):
     CLASS  = Token(TokenType.KEYWORD, "class")
     METHOD = Token(TokenType.KEYWORD, "method")
@@ -102,7 +108,7 @@ class Keyword(Enum):
     LET = Token(TokenType.KEYWORD, "let")
     DO = Token(TokenType.KEYWORD, "do")
     IF = Token(TokenType.KEYWORD, "if")
-    ELSE = Token(TokenType.KEYWORD, "void")
+    ELSE = Token(TokenType.KEYWORD, "else")
     WHILE = Token(TokenType.KEYWORD, "while")
     RETURN = Token(TokenType.KEYWORD, "return")
     TRUE = Token(TokenType.KEYWORD, "true")
@@ -191,11 +197,11 @@ class JackTokenizer:
                 for curr_token in line.split()
             ]
             for curr_token in curr_tokens:
-                print(f"line: '{' '.join(curr_tokens)}', token: '{curr_token}'")
+                # print(f"line: '{' '.join(curr_tokens)}', token: '{curr_token}'")
                 self.tokens.append(Token.create(curr_token))
 
-        for token in self.tokens:
-            print(token)
+        # for token in self.tokens:
+        #     print(token)
 
         self.token_index: int = 0
         self.token: Token = None
@@ -257,6 +263,8 @@ class JackTokenizer:
         assert self.token is not None
         return self.token.isStringConst()
 
+    def getTokens(self) -> List[Token]:
+        return self.tokens
 
 if __name__ == '__main__':
 

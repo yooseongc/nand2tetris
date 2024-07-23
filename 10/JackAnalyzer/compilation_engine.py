@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from typing import List, Union
-from . import JackTokenizer
+from .tokenizer import JackTokenizer
 from xml.etree import ElementTree as ET
 
 def element(key: str, text: str = None) -> ET.Element:
@@ -64,7 +64,7 @@ class VarNameWithArrayRefTerm:
         self.expression = expression
 
     def toXMLElements(self) -> List[ET.Element]:
-        return [self.varNameTerm.toXMLElement(), symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
+        return [*self.varNameTerm.toXMLElements(), symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
 
 class SubroutineCall:
     def __init__(self, subroutineName: str, expressionList: ExpressionList, classOrVarName: str = None) -> None:
@@ -88,7 +88,7 @@ class ParenthesisTerm:
         self.expression = expression
 
     def toXMLElements(self) -> List[ET.Element]:
-        return [symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
+        return [symbolElement("("), self.expression.toXMLElement(), symbolElement(")")]
 
 class UnaryOpTerm:
 
@@ -97,7 +97,7 @@ class UnaryOpTerm:
         self.term = term
 
     def toXMLElements(self) -> List[ET.Element]:
-        return [keywordElement(self.unaryOp), self.term.toXMLElement()]
+        return [symbolElement(self.unaryOp), self.term.toXMLElement()]
 
 class Term:
     def __init__(self, term: Union[IntegerConstant, StringConstant, KeywordConstant, VarNameTerm, VarNameWithArrayRefTerm, SubroutineCall, ParenthesisTerm, UnaryOpTerm]) -> None:
@@ -242,7 +242,7 @@ class ClassVarDec:
     def __init__(self, keyword: str, type: str, identifiers: List[str]) -> None:
         self.keyword = keyword
         self.type = type
-        self.identifiers = []
+        self.identifiers = identifiers
 
     def toXMLElement(self) -> ET.Element:
         root = element("classVarDec")
@@ -251,7 +251,6 @@ class ClassVarDec:
             root.append(keywordElement(self.type))
         else:
             root.append(identifierElement(self.type))
-        root.append(identifierElement(self.type))
         for idx, identifier in enumerate(self.identifiers):
             if idx != 0:
                 root.append(symbolElement(","))
@@ -297,7 +296,6 @@ class VarDec:
             root.append(keywordElement(self.type))
         else:
             root.append(identifierElement(self.type))
-        root.append(identifierElement(self.type))
         for idx, identifier in enumerate(self.identifiers):
             if idx != 0:
                 root.append(symbolElement(","))
@@ -345,7 +343,6 @@ class SubroutineDec:
         root.append(symbolElement("("))
         root.append(self.parameterList.toXMLElement())
         root.append(symbolElement(")"))
-        root.append(self.parameterList.toXMLElement())
         root.append(self.subroutineBody.toXMLElement())
         return root
 
@@ -356,7 +353,7 @@ class Class:
         self.classVarDecs = classVarDecs
         self.subroutineDecs = subroutineDecs
 
-    def toXMLElement(self) -> ET:
+    def toXMLElement(self) -> ET.Element:
         root = ET.Element("class")
         root.append(keywordElement(self.keyword))
         root.append(identifierElement(self.identifier))
@@ -374,12 +371,12 @@ class CompilationEngine:
         self.jack_file = jack_file
         self.xml_file = xml_file
         self.tokenizer = JackTokenizer(jack_file)
-        self.tree = ET.ElementTree("classes")
-        ET.indent(self.tree, space="  ")
+        self.tree = ET.ElementTree(ET.Element("classes"))
+        self.tokens = ET.ElementTree(ET.Element("tokens"))
 
     def compileClass(self) -> Class:
         # 'class' className '{' classVarDec* subroutineDec* '}'
-        assert self.tokenizer.tokenType() == "class"
+        assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "class"
         self.tokenizer.advance()
         className = self.tokenizer.identifier()
         self.tokenizer.advance()
@@ -403,7 +400,7 @@ class CompilationEngine:
 
         sf = self.tokenizer.keyword()
         self.tokenizer.advance()
-        if self.type in ["int", "char", "boolean"]:
+        if self.tokenizer.isKeyword() and self.tokenizer.keyword() in ["int", "char", "boolean"]:
             type = self.tokenizer.keyword()
         else:
             type = self.tokenizer.identifier()
@@ -451,7 +448,6 @@ class CompilationEngine:
             varDecs.append(self.compileVarDec())
 
         statements = self.compileStatements()
-
         assert self.tokenizer.symbol() == "}"
         self.tokenizer.advance()
 
@@ -459,17 +455,21 @@ class CompilationEngine:
         return SubroutineDec(cfm, type, subroutineName, paramList, subroutineBody)
 
     def compileParameterList(self) -> ParameterList:
-        assert self.tokenizer.symbol() == '('
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == '('
+        self.tokenizer.advance()
 
         parameters = []
-        self.tokenizer.advance()
+        if self.tokenizer.isSymbol() and self.tokenizer.symbol() == ')':
+            return ParameterList(parameters)
+
         type = self.tokenizer.keyword()
         self.tokenizer.advance()
         varName = self.tokenizer.identifier()
         parameters.append(Parameter(type, varName))
-
         self.tokenizer.advance()
+
         while (self.tokenizer.isSymbol() and self.tokenizer.symbol() == ','):
+            self.tokenizer.advance()
             type = self.tokenizer.keyword()
             self.tokenizer.advance()
             varName = self.tokenizer.identifier()
@@ -479,9 +479,14 @@ class CompilationEngine:
         return ParameterList(parameters)
 
     def compileVarDec(self) -> ClassVarDec:
-        assert self.tokenizer.keyword() == "var"
+        assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "var"
         self.tokenizer.advance()
-        if self.type in ["int", "char", "boolean"]:
+
+        if self.tokenizer.isKeyword() and self.tokenizer.keyword() in [
+            "int",
+            "char",
+            "boolean",
+        ]:
             type = self.tokenizer.keyword()
         else:
             type = self.tokenizer.identifier()
@@ -497,11 +502,12 @@ class CompilationEngine:
 
         assert self.tokenizer.symbol() == ";"
         self.tokenizer.advance()
+
         return VarDec(type, varNames)
 
     def compileStatements(self) -> Statements:
         sts = []
-        while (not (self.tokenizer.isSymbol() and self.tokenizer.symbol == '}')):
+        while (not (self.tokenizer.isSymbol() and self.tokenizer.symbol() == '}')):
             if self.tokenizer.keyword() == "let":
                 sts.append(self.compileLet())
             elif self.tokenizer.keyword() == "if":
@@ -512,7 +518,7 @@ class CompilationEngine:
                 sts.append(self.compileDo())
             elif self.tokenizer.keyword() == "return":
                 sts.append(self.compileReturn())
-            self.tokenizer.advance()
+
         return Statements(sts)
 
     def compileLet(self) -> LetStatement:
@@ -520,19 +526,18 @@ class CompilationEngine:
         self.tokenizer.advance()
         varName = self.tokenizer.identifier()
         self.tokenizer.advance()
+
         arrayRefExpression = None
-        if self.tokenizer.isSymbol() and self.tokenizer.symbol() == '=':
-            expression = self.compileExpression()
-            self.tokenizer.advance()
-        else:
-            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "["
+        if self.tokenizer.isSymbol() and self.tokenizer.symbol() == "[":
             self.tokenizer.advance()
             arrayRefExpression = self.compileExpression()
-            self.tokenizer.advance()
             assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "]"
             self.tokenizer.advance()
-            expression = self.compileExpression()
-            self.tokenizer.advance()
+
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "="
+        self.tokenizer.advance()
+        expression = self.compileExpression()
+
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
         self.tokenizer.advance()
         return LetStatement(varName, expression, arrayRefExpression)
@@ -543,22 +548,20 @@ class CompilationEngine:
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "("
         self.tokenizer.advance()
         expression = self.compileExpression()
-        self.tokenizer.advance()
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
         self.tokenizer.advance()
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "{"
         self.tokenizer.advance()
         statements = self.compileStatements()
-        self.tokenizer.advance()
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "}"
         self.tokenizer.advance()
 
         elseStatements = None
         if self.tokenizer.isKeyword() and self.tokenizer.keyword() == 'else':
+            self.tokenizer.advance()
             assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "{"
             self.tokenizer.advance()
             elseStatements = self.compileStatements()
-            self.tokenizer.advance()
             assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "}"
             self.tokenizer.advance()
 
@@ -567,41 +570,188 @@ class CompilationEngine:
     def compileWhile(self) -> WhileStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "while"
         self.tokenizer.advance()
-        # TODO
-        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
-        return WhileStatement()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "("
+        self.tokenizer.advance()
+        expression = self.compileExpression()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+        self.tokenizer.advance()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "{"
+        self.tokenizer.advance()
+        statements = self.compileStatements()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "}"
+        self.tokenizer.advance()
+
+        return WhileStatement(expression, statements)
 
     def compileDo(self) -> DoStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "do"
         self.tokenizer.advance()
-        # TODO
+        ident1 = self.tokenizer.identifier()
+        self.tokenizer.advance()
+        ident2 = None
+        if (self.tokenizer.isSymbol() and self.tokenizer.symbol() == "."):
+            self.tokenizer.advance()
+            ident2 = self.tokenizer.identifier()
+            self.tokenizer.advance()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "("
+        self.tokenizer.advance()
+        expressionList = self.compileExpressionList()
+        assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+        self.tokenizer.advance()
+
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
-        return DoStatement()
+        self.tokenizer.advance()
+
+        if ident2 is not None:
+            return DoStatement(SubroutineCall(ident2, expressionList, ident1))
+        else:
+            return DoStatement(SubroutineCall(ident1, expressionList))
 
     def compileReturn(self) -> ReturnStatement:
         assert self.tokenizer.isKeyword() and self.tokenizer.keyword() == "return"
         self.tokenizer.advance()
-        # TODO
+        if (self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"):
+            self.tokenizer.advance()
+            return ReturnStatement(None)
+        expression = self.compileExpression()
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ";"
-        return ReturnStatement()
+        self.tokenizer.advance()
+        return ReturnStatement(expression)
 
     def compileExpression(self) -> Expression:
-        # TODO
-        pass
+        term = self.compileTerm()
+        additionalTerms = []
+        while (self.tokenizer.isSymbol() and self.tokenizer.symbol() in ["+", "-", "*", "/", "&", "|", "<", ">", "="]):
+            op = self.tokenizer.symbol()
+            self.tokenizer.advance()
+            aterm = self.compileTerm()
+            additionalTerms.append(AdditionalTerm(op, aterm))
+
+        return Expression(term, additionalTerms)
 
     def compileTerm(self) -> Term:
-        # TODO
-        pass
+        if (self.tokenizer.isIntConst()):
+            term = Term(IntegerConstant(self.tokenizer.intVal()))
+            self.tokenizer.advance()
+        elif (self.tokenizer.isStringConst()):
+            term = Term(StringConstant(self.tokenizer.stringVal()))
+            self.tokenizer.advance()
+        elif (self.tokenizer.isKeyword() and self.tokenizer.keyword() in ['true', 'false', 'null', 'this']):
+            term = Term(KeywordConstant(self.tokenizer.keyword()))
+            self.tokenizer.advance()
+        elif (self.tokenizer.isSymbol() and self.tokenizer.symbol() == '('):
+            self.tokenizer.advance()
+            term = Term(ParenthesisTerm(self.compileExpression()))
+            assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+            self.tokenizer.advance()
+        elif (self.tokenizer.isSymbol() and self.tokenizer.symbol() in ['-', '~']):
+            op = self.tokenizer.symbol()
+            self.tokenizer.advance()
+            nestedTerm = self.compileTerm()
+            term = Term(UnaryOpTerm(op, nestedTerm))
+        else:
+            ident1 = self.tokenizer.identifier()
+            self.tokenizer.advance()
+            if (self.tokenizer.isSymbol() and self.tokenizer.symbol() == '['):
+                self.tokenizer.advance()
+                expression = self.compileExpression()
+                assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "]"
+                self.tokenizer.advance()
+                term = Term(VarNameWithArrayRefTerm(VarNameTerm(ident1), expression))
+            elif (self.tokenizer.isSymbol() and self.tokenizer.symbol() == '.'):
+                self.tokenizer.advance()
+                ident2 = self.tokenizer.identifier()
+                self.tokenizer.advance()
+                assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == "("
+                self.tokenizer.advance()
+                expressionList = self.compileExpressionList()
+                assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+                self.tokenizer.advance()
+                term = Term(SubroutineCall(ident2, expressionList, ident1))
+            elif (self.tokenizer.isSymbol() and self.tokenizer.symbol() == '('):
+                self.tokenizer.advance()
+                expressionList = self.compileExpressionList()
+                assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == ")"
+                self.tokenizer.advance()
+                term = Term(SubroutineCall(ident1, expressionList))
+            else:
+                term = Term(VarNameTerm(ident1))
+
+        return term
 
     def compileExpressionList(self) -> ExpressionList:
-        # TODO
-        pass
+        if (self.tokenizer.isSymbol() and self.tokenizer.symbol() == ')'):
+            return ExpressionList([])
+
+        expressions = [self.compileExpression()]
+
+        while (self.tokenizer.isSymbol() and self.tokenizer.symbol() == ','):
+            self.tokenizer.advance()
+            expressions.append(self.compileExpression())
+
+        return ExpressionList(expressions)
 
     def compile(self) -> None:
         while self.tokenizer.hasMoreTokens():
             self.tokenizer.advance()
-            if self.tokenizer.tokenType() == "class":
+            if self.tokenizer.isKeyword() and self.tokenizer.keyword() == "class":
                 self.tree.getroot().append(self.compileClass().toXMLElement())
 
-    def write(self) -> None:
+    def writeTokens(self) -> None:
+        for token in self.tokenizer.getTokens():
+            self.tokens.getroot().append(token.toXMLElement())
+        ET.indent(self.tokens, space="  ")
+        self.tokens.write(self.xml_file.replace(".xml", "T.xml"))
+        
+    def writeTree(self) -> None:
+        ET.indent(self.tree, space="  ")
         self.tree.write(self.xml_file)
+
+    def write(self) -> None:
+        self.writeTree()
+        self.writeTokens()
+
+if __name__ == '__main__':
+
+    import os, sys
+    from xml.etree import ElementTree as ET
+
+    arguments = sys.argv[1:]
+    if len(arguments) < 1:
+        print("no path in argument")
+        sys.exit(1)
+
+    path = arguments[0]
+    if not os.path.exists(path):
+        print(f"cannot find path: {path}")
+        raise IOError()
+
+    path = os.path.abspath(path)
+
+    jack_files: List[str] = []
+    xml_files: List[str] = []
+
+    if os.path.isdir(path):
+        for file in os.listdir(path):
+            if file.endswith(".jack"):
+                jack_files.append(os.path.join(path, file))
+                xml_files.append(os.path.join(path, file.replace(".jack", ".xml")))
+    else:
+        assert path.endswith(".jack")
+        jack_files.append(path)
+        xml_files.append(path.replace(".jack", ".xml"))
+
+    if len(jack_files) < 1:
+        print(f"no jack files in: {path}")
+        raise IOError()
+
+    for i in range(len(jack_files)):
+        print("jack file to tokenize: ")
+        print(f"  {jack_files[i]}")
+        print("xml out file: ")
+        print(f"  {xml_files[i]}")
+        print(f"  {xml_files[i].replace('.xml', 'T.xml')}")
+
+        engine = CompilationEngine(jack_files[i], xml_files[i])
+        engine.compile()
+        engine.write()
