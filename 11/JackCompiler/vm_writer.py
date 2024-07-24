@@ -29,18 +29,21 @@ class VMWriter:
     def __init__(self, vm_file: str) -> None:
         self.vm_file = vm_file
         self.f = open(vm_file, "wt")
-    
+
     def close(self) -> None:
         self.f.close()
 
-    def _write_lines(self, codes: List[str]):
+    def _write_line(self, code: str) -> None:
+        self.f.write(f"{code}\n")
+
+    def _write_lines(self, codes: List[str]) -> None:
         self.f.writelines("\n".join(codes) + "\n")
 
     def writePush(self, segment: Segment, index: int) -> None:
-        pass
+        self._write_line(f"push {segment.value} {index}")
 
     def writePop(self, segment: Segment, index: int) -> None:
-        pass
+        self._write_line(f"pop {segment.value} {index}")
 
     def writeArithmetic(self, command: ArithmeticCommand) -> None:
         pass
@@ -58,8 +61,7 @@ class VMWriter:
         pass
 
     def writeFunction(self, name: str, nLocals: int) -> None:
-        pass
+        self._write_line(f"function {name} {nLocals}")
 
     def writeReturn(self) -> None:
         pass
-    

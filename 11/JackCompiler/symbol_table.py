@@ -39,7 +39,9 @@ class Symbol:
 
 class SymbolTable:
     
-    def __init__(self) -> None:
+    def __init__(self, class_name: str) -> None:
+        self.class_name = class_name
+        self.subroutine_name = None
         self.class_table: Dict[str, Symbol] = {}
         self.subroutine_table: Dict[str, Symbol] = {}
         self.static_idx = 0
@@ -47,7 +49,14 @@ class SymbolTable:
         self.argument_idx = 0
         self.var_idx = 0
     
-    def startSubroutine(self) -> None:
+    def className(self) -> str:
+        return self.class_name
+    
+    def subroutineName(self) -> str:
+        return self.subroutine_name
+    
+    def startSubroutine(self, subroutineName: str) -> None:
+        self.subroutine_name = subroutineName
         self.subroutine_table: Dict[str, Symbol] = {}
         self.argument_idx = 0
         self.var_idx = 0
@@ -77,7 +86,7 @@ class SymbolTable:
             self.subroutine_table[name] = Symbol(name, type, kind, idx)
 
     def varCount(self, kind: SymbolKind) -> int:
-        table = self.class_table if [SymbolKind.STATIC, SymbolKind.FIELD] else self.subroutine_table
+        table = self.class_table if kind in [SymbolKind.STATIC, SymbolKind.FIELD] else self.subroutine_table
         return len([symbol for symbol in table.items() if symbol.kind() == kind])
 
     def kindOf(self, name: str) -> SymbolKind:

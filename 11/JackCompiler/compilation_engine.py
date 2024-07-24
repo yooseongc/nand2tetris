@@ -3,6 +3,8 @@
 from __future__ import annotations
 from typing import List, Union
 from .tokenizer import JackTokenizer
+from .symbol_table import SymbolTable, SymbolKind
+from .vm_writer import VMWriter, Segment, ArithmeticCommand
 from xml.etree import ElementTree as ET
 
 def element(key: str, text: str = None) -> ET.Element:
@@ -165,11 +167,15 @@ class LetStatement:
         root.append(symbolElement(";"))
         return root
 
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        return
+
+
 class IfStatement:
     def __init__(self, expression: Expression, statements: Statements, elseStatements: Statements = None) -> None:
         self.expression = expression
         self.statements = statements
-        self.elseStataements = elseStatements
+        self.elseStatements = elseStatements
 
     def toXMLElement(self) -> ET.Element:
         root = element("ifStatement")
@@ -180,12 +186,16 @@ class IfStatement:
         root.append(symbolElement("{"))
         root.append(self.statements.toXMLElement())
         root.append(symbolElement("}"))
-        if self.elseStataements is not None:
+        if self.elseStatements is not None:
             root.append(keywordElement("else"))
             root.append(symbolElement("{"))
             root.append(self.elseStataements.toXMLElement())
             root.append(symbolElement("}"))
         return root
+
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        return 
+
 
 class WhileStatement:
     def __init__(self, expression: Expression, statements: Statements) -> None:
@@ -203,6 +213,9 @@ class WhileStatement:
         root.append(symbolElement("}"))
         return root
 
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        return
+
 class DoStatement:
 
     def __init__(self, subroutineCall: SubroutineCall) -> None:
@@ -216,6 +229,10 @@ class DoStatement:
         root.append(symbolElement(";"))
         return root
 
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        return
+
+
 class ReturnStatement:
     def __init__(self, expression: Expression = None) -> None:
         self.expression = expression
@@ -227,6 +244,9 @@ class ReturnStatement:
             root.append(self.expression.toXMLElement())
         root.append(symbolElement(";"))
         return root
+    
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        return
 
 class Statements:
     def __init__(self, statements: List[Union[LetStatement, IfStatement, WhileStatement, DoStatement, ReturnStatement]]) -> None:
@@ -237,6 +257,10 @@ class Statements:
         for statement in self.statements:
             root.append(statement.toXMLElement())
         return root
+    
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for statement in self.statements:
+            statement.writeVMCodes(st, writer)    
 
 class ClassVarDec:
     def __init__(self, keyword: str, type: str, identifiers: List[str]) -> None:
@@ -258,6 +282,12 @@ class ClassVarDec:
         root.append(symbolElement(";"))
         return root
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for varName in self.identifiers:
+            st.define(
+                varName, self.type, SymbolKind.FIELD if self.keyword == "field" else SymbolKind.STATIC
+            )
+
 class Parameter:
     def __init__(self, type: str, identifier: str) -> None:
         self.type = type
@@ -268,6 +298,9 @@ class Parameter:
             keywordElement(self.type) if self.type in ["int", "char", "boolean"] else identifierElement(self.type), 
             identifierElement(self.identifier)
         ]
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        st.define(self.identifier, self.type, SymbolKind.ARGUMENT)
 
 class ParameterList:
 
@@ -282,6 +315,10 @@ class ParameterList:
             for elem in parameter.toXMLElements():
                 root.append(elem)
         return root
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for parameter in self.parameters:
+            parameter.writeVMCodes(st, writer)
 
 class VarDec:
     def __init__(self, type: str, identifiers: List[str]) -> None:
@@ -303,6 +340,10 @@ class VarDec:
         root.append(symbolElement(";"))
         return root
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for varName in self.identifiers:
+            st.define(varName, type, SymbolKind.VAR)
+
 class SubroutineBody:
     def __init__(self, varDecList: List[VarDec], statements: Statements) -> None:
         self.varDecList = varDecList
@@ -317,6 +358,11 @@ class SubroutineBody:
         root.append(symbolElement("}"))
         return root
 
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for varDec in self.varDecList:
+            varDec.writeVMCodes(st, writer)
+        self.statements.writeVMCodes(st, writer)
+
 class SubroutineDec:
     def __init__(
         self,
@@ -324,7 +370,7 @@ class SubroutineDec:
         type: str,
         identifier: str,
         parameterList: ParameterList,
-        subroutineBody: SubroutineBody,
+        subroutineBody: SubroutineBody
     ) -> None:
         self.keyword = keyword
         self.type = type
@@ -346,6 +392,23 @@ class SubroutineDec:
         root.append(self.subroutineBody.toXMLElement())
         return root
 
+    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        st.startSubroutine(self.identifier)
+        if self.keyword == "method":
+            st.define("this", st.className(), SymbolKind.ARGUMENT)
+
+        self.parameterList.writeVMCodes(st, writer)
+
+        writer.writeFunction(
+            f"{st.className()}.{st.subroutineName()}", st.varCount(SymbolKind.ARGUMENT)
+        )
+        if self.keyword == "method":
+            writer.writePush(Segment.ARGUMENT, 0)
+            writer.writePop(Segment.POINTER, 0)
+            
+        self.subroutineBody.writeVMCodes(st, writer)
+
+
 class Class:
     def __init__(self, identifier: str, classVarDecs: List[ClassVarDec], subroutineDecs: List[SubroutineDec]) -> None:
         self.keyword = "class"
@@ -365,12 +428,21 @@ class Class:
         root.append(symbolElement("}"))
         return root
 
+    def writeVMCodes(self, writer: VMWriter) -> None:
+        st = SymbolTable(self.identifier)
+        for classVarDec in self.classVarDecs:
+            classVarDec.writeVMCodes(st, writer)
+        for subroutineDec in self.subroutineDecs:
+            subroutineDec.writeVMCodes(st, writer)
+
 class CompilationEngine:
 
-    def __init__(self, jack_file: str, xml_file: str) -> None:
+    def __init__(self, jack_file: str, vm_file: str) -> None:
         self.jack_file = jack_file
-        self.xml_file = xml_file
+        self.vm_file = vm_file
         self.tokenizer = JackTokenizer(jack_file)
+        self.vm_writer = VMWriter(vm_file)
+        self.xml_file = vm_file.replace(".vm", ".xml")
         self.tree = ET.ElementTree(ET.Element("classes"))
         self.tokens = ET.ElementTree(ET.Element("tokens"))
 
@@ -458,7 +530,7 @@ class CompilationEngine:
         assert self.tokenizer.isSymbol() and self.tokenizer.symbol() == '('
         self.tokenizer.advance()
 
-        parameters = []
+        parameters: List[Parameter] = []
         if self.tokenizer.isSymbol() and self.tokenizer.symbol() == ')':
             return ParameterList(parameters)
 
@@ -695,14 +767,18 @@ class CompilationEngine:
         while self.tokenizer.hasMoreTokens():
             self.tokenizer.advance()
             if self.tokenizer.isKeyword() and self.tokenizer.keyword() == "class":
-                self.tree.getroot().append(self.compileClass().toXMLElement())
+                clazz = self.compileClass()
+                clazz.writeVMCodes(self.vm_writer)
+                self.tree.getroot().append(clazz.toXMLElement())
+                
+        self.vm_writer.close()
 
     def writeTokens(self) -> None:
         for token in self.tokenizer.getTokens():
             self.tokens.getroot().append(token.toXMLElement())
         ET.indent(self.tokens, space="  ")
         self.tokens.write(self.xml_file.replace(".xml", "T.xml"))
-        
+
     def writeTree(self) -> None:
         ET.indent(self.tree, space="  ")
         self.tree.write(self.xml_file)
