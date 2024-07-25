@@ -35,7 +35,9 @@ class IntegerConstant:
 
     def toXMLElements(self) -> List[ET.Element]:
         return [intConstElement(self.value)]
-
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        writer.writePush(Segment.CONST, self.value)
 
 class StringConstant:
     def __init__(self, value: str) -> None:
@@ -44,12 +46,30 @@ class StringConstant:
     def toXMLElements(self) -> List[ET.Element]:
         return [strConstElement(self.value)]
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        writer.writePush(Segment.CONST, len(self.value))
+        writer.writeCall("String.new", 1)
+        for c in self.value:
+            writer.writePush(Segment.CONST, ord(c))
+            writer.writeCall("String.appendChar", 2)
+
 class KeywordConstant:
     def __init__(self, value: str) -> None:
         self.value = value
 
     def toXMLElements(self) -> List[ET.Element]:
         return [keywordElement(self.value)]
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        if self.value == "false":
+            writer.writePush(Segment.CONST, 0)
+        elif self.value == "true":
+            writer.writePush(Segment.CONST, 0)
+            writer.writeArithmetic(ArithmeticCommand.NOT)
+        elif self.value == "this":
+            writer.writePush(Segment.POINTER, 0)
+        elif self.value == "null":
+            writer.writePush(Segment.CONST, 0) 
 
 class VarNameTerm:
     def __init__(self, value: str) -> None:
@@ -58,6 +78,15 @@ class VarNameTerm:
     def toXMLElements(self) -> List[ET.Element]:
         return [identifierElement(self.value)]
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        if st.kindOf(self.value) == SymbolKind.VAR:
+            writer.writePush(Segment.LOCAL, st.indexOf(self.value))
+        elif st.kindOf(self.value) == SymbolKind.ARGUMENT:
+            writer.writePush(Segment.ARGUMENT, st.indexOf(self.value))
+        elif st.kindOf(self.value) == SymbolKind.FIELD:
+            writer.writePush(Segment.THIS, st.indexOf(self.value))
+        elif st.kindOf(self.value) == SymbolKind.STATIC:
+            writer.writePush(Segment.STATIC, st.indexOf(self.value))
 
 class VarNameWithArrayRefTerm:
 
@@ -67,6 +96,13 @@ class VarNameWithArrayRefTerm:
 
     def toXMLElements(self) -> List[ET.Element]:
         return [*self.varNameTerm.toXMLElements(), symbolElement("["), self.expression.toXMLElement(), symbolElement("]")]
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.varNameTerm.writeVMCodes(st, writer)
+        self.expression.writeVMCodes(st, writer)
+        writer.writeArithmetic(ArithmeticCommand.ADD)
+        writer.writePop(Segment.POINTER, 1)
+        writer.writePush(Segment.THAT, 0)
 
 class SubroutineCall:
     def __init__(self, subroutineName: str, expressionList: ExpressionList, classOrVarName: str = None) -> None:
@@ -85,21 +121,58 @@ class SubroutineCall:
         ret.append(symbolElement(")"))
         return ret
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+
+        if self.classOrVarName is None:
+            writer.writePush(Segment.POINTER, 0)
+            self.expressionList.writeVMCodes(st, writer)
+            writer.writeCall(
+                f"{st.className()}.{self.subroutineName}",
+                self.expressionList.length() + 1,  # include THIS
+            )
+        else:
+            if st.kindOf(self.classOrVarName) != SymbolKind.NONE:
+                if st.kindOf(self.classOrVarName) == SymbolKind.VAR:
+                    writer.writePush(Segment.LOCAL, st.indexOf(self.classOrVarName))
+                elif st.kindOf(self.classOrVarName) == SymbolKind.ARGUMENT:
+                    writer.writePush(Segment.ARGUMENT, st.indexOf(self.classOrVarName))
+                elif st.kindOf(self.classOrVarName) == SymbolKind.FIELD:
+                    writer.writePush(Segment.THIS, st.indexOf(self.classOrVarName))
+                elif st.kindOf(self.classOrVarName) == SymbolKind.STATIC:
+                    writer.writePush(Segment.STATIC, st.indexOf(self.classOrVarName))
+                self.expressionList.writeVMCodes(st, writer)
+                writer.writeCall(
+                    f"{st.typeOf(self.classOrVarName)}.{self.subroutineName}",
+                    self.expressionList.length() + 1,  # include THIS
+                )
+            else:
+                self.expressionList.writeVMCodes(st, writer)
+                writer.writeCall(
+                    f"{self.classOrVarName}.{self.subroutineName}",
+                    self.expressionList.length(),
+                )
+
 class ParenthesisTerm:
     def __init__(self, expression: Expression) -> None:
         self.expression = expression
 
     def toXMLElements(self) -> List[ET.Element]:
         return [symbolElement("("), self.expression.toXMLElement(), symbolElement(")")]
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.expression.writeVMCodes(st, writer)
 
 class UnaryOpTerm:
-
-    def __init__(self, unaryOp: str, term: Term) -> None:
+    def __init__(self, unaryOp: UnaryOperator, term: Term) -> None:
         self.unaryOp = unaryOp
         self.term = term
 
     def toXMLElements(self) -> List[ET.Element]:
-        return [symbolElement(self.unaryOp), self.term.toXMLElement()]
+        return [self.unaryOp.toXMLElement(), self.term.toXMLElement()]
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.term.writeVMCodes(st, writer)
+        self.unaryOp.writeVMCodes(st, writer)
 
 class Term:
     def __init__(self, term: Union[IntegerConstant, StringConstant, KeywordConstant, VarNameTerm, VarNameWithArrayRefTerm, SubroutineCall, ParenthesisTerm, UnaryOpTerm]) -> None:
@@ -111,17 +184,64 @@ class Term:
             root.append(elem)
         return root
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.term.writeVMCodes(st, writer)
+
+class UnaryOperator:
+    def __init__(self, op: str) -> None:
+        self.op = op
+
+    def toXMLElement(self) -> ET.Element:
+        return symbolElement(self.op)
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        if self.op == "~":
+            writer.writeArithmetic(ArithmeticCommand.NOT)
+        elif self.op == "-":
+            writer.writeArithmetic(ArithmeticCommand.NEG)
+
+class Operator:
+    def __init__(self, op: str) -> None:
+        self.op = op
+    
+    def toXMLElement(self) -> ET.Element:
+        return symbolElement(self.op)
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        if self.op == "+":
+            writer.writeArithmetic(ArithmeticCommand.ADD)
+        elif self.op == "-":
+            writer.writeArithmetic(ArithmeticCommand.SUB)
+        elif self.op == "*":
+            writer.writeCall("Math.multiply", 2)
+        elif self.op == "/":
+            writer.writeCall("Math.divide", 2)
+        elif self.op == "&":
+            writer.writeArithmetic(ArithmeticCommand.AND)
+        elif self.op == "|":
+            writer.writeArithmetic(ArithmeticCommand.OR)
+        elif self.op == "<":
+            writer.writeArithmetic(ArithmeticCommand.LT)
+        elif self.op == ">":
+            writer.writeArithmetic(ArithmeticCommand.GT)
+        elif self.op == "=":
+            writer.writeArithmetic(ArithmeticCommand.EQ)
+
 class AdditionalTerm:
     def __init__(
         self,
-        op: str,
+        op: Operator,
         term: Term,
     ) -> None:
         self.op = op
         self.term = term
 
     def toXMLElements(self) -> List[ET.Element]:
-        return [symbolElement(self.op), self.term.toXMLElement()]
+        return [self.op.toXMLElement(), self.term.toXMLElement()]
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter, cond: bool = False) -> None:
+        self.term.writeVMCodes(st, writer)
+        self.op.writeVMCodes(st, writer)
 
 class Expression:
     def __init__(self, term: Term, terms: List[AdditionalTerm]) -> None:
@@ -136,6 +256,11 @@ class Expression:
                 root.append(elem)
         return root
 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.term.writeVMCodes(st, writer)
+        for term in self.terms:
+            term.writeVMCodes(st, writer)
+
 class ExpressionList:
     def __init__(self, expressions: List[Expression]) -> None:
         self.expressions = expressions
@@ -147,6 +272,13 @@ class ExpressionList:
                 root.append(symbolElement(","))
             root.append(expression.toXMLElement())
         return root
+    
+    def length(self) -> int:
+        return len(self.expressions)
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        for expression in self.expressions:
+            expression.writeVMCodes(st, writer)
 
 class LetStatement:
     def __init__(self, varName: str, expression: Expression, arrayRefExpression: Expression = None) -> None:
@@ -167,15 +299,48 @@ class LetStatement:
         root.append(symbolElement(";"))
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        return
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
 
+        self.expression.writeVMCodes(st, writer)
+
+        if self.arrayRefExpression is not None:
+
+            if st.kindOf(self.varName) == SymbolKind.VAR:
+                writer.writePush(Segment.LOCAL, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.ARGUMENT:
+                writer.writePush(Segment.ARGUMENT, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.FIELD:
+                writer.writePush(Segment.THIS, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.STATIC:
+                writer.writePush(Segment.STATIC, st.indexOf(self.varName))
+            else:
+                assert True
+
+            self.arrayRefExpression.writeVMCodes(st, writer)
+            writer.writeArithmetic(ArithmeticCommand.ADD)
+            writer.writePop(Segment.POINTER, 1)
+            writer.writePop(Segment.THAT, 0)
+            
+        else:
+            if st.kindOf(self.varName) == SymbolKind.VAR:
+                writer.writePop(Segment.LOCAL, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.ARGUMENT:
+                writer.writePop(Segment.ARGUMENT, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.FIELD:
+                writer.writePop(Segment.THIS, st.indexOf(self.varName))
+            elif st.kindOf(self.varName) == SymbolKind.STATIC:
+                writer.writePop(Segment.STATIC, st.indexOf(self.varName))
+            else:
+                assert True
 
 class IfStatement:
+
+    LABEL_INDEX = 0
+
     def __init__(self, expression: Expression, statements: Statements, elseStatements: Statements = None) -> None:
-        self.expression = expression
-        self.statements = statements
-        self.elseStatements = elseStatements
+        self.expression: Expression = expression
+        self.statements: Statements = statements
+        self.elseStatements: Statements = elseStatements
 
     def toXMLElement(self) -> ET.Element:
         root = element("ifStatement")
@@ -189,15 +354,30 @@ class IfStatement:
         if self.elseStatements is not None:
             root.append(keywordElement("else"))
             root.append(symbolElement("{"))
-            root.append(self.elseStataements.toXMLElement())
+            root.append(self.elseStatements.toXMLElement())
             root.append(symbolElement("}"))
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        return 
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        label1 = f"{st.className()}.{st.subroutineName()}.IF.{IfStatement.LABEL_INDEX}"
+        IfStatement.LABEL_INDEX += 1
+        label2 = f"{st.className()}.{st.subroutineName()}.IF.{IfStatement.LABEL_INDEX}"
+        IfStatement.LABEL_INDEX += 1
 
+        self.expression.writeVMCodes(st, writer)
+        writer.writeArithmetic(ArithmeticCommand.NOT)
+        writer.writeIf(label1)
+        self.statements.writeVMCodes(st, writer)
+        writer.writeGoto(label2)
+        writer.writeLabel(label1)
+        if self.elseStatements is not None:
+            self.elseStatements.writeVMCodes(st, writer)
+        writer.writeLabel(label2)
 
 class WhileStatement:
+
+    LABEL_INDEX = 0
+
     def __init__(self, expression: Expression, statements: Statements) -> None:
         self.expression = expression
         self.statements = statements
@@ -213,8 +393,22 @@ class WhileStatement:
         root.append(symbolElement("}"))
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        return
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        label1 = (
+            f"{st.className()}.{st.subroutineName()}.WHILE.{WhileStatement.LABEL_INDEX}"
+        )
+        WhileStatement.LABEL_INDEX += 1
+        label2 = (
+            f"{st.className()}.{st.subroutineName()}.WHILE.{WhileStatement.LABEL_INDEX}"
+        )
+        WhileStatement.LABEL_INDEX += 1
+        writer.writeLabel(label1)
+        self.expression.writeVMCodes(st, writer)
+        writer.writeArithmetic(ArithmeticCommand.NOT)
+        writer.writeIf(label2)
+        self.statements.writeVMCodes(st, writer)
+        writer.writeGoto(label1)
+        writer.writeLabel(label2)
 
 class DoStatement:
 
@@ -229,8 +423,9 @@ class DoStatement:
         root.append(symbolElement(";"))
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        return
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        self.subroutineCall.writeVMCodes(st, writer)
+        writer.writePop(Segment.TEMP, 0)
 
 
 class ReturnStatement:
@@ -244,9 +439,13 @@ class ReturnStatement:
             root.append(self.expression.toXMLElement())
         root.append(symbolElement(";"))
         return root
-    
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        return
+
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        if self.expression is None:
+            writer.writePush(Segment.CONST, 0)
+        else:
+            self.expression.writeVMCodes(st, writer)
+        writer.writeReturn()
 
 class Statements:
     def __init__(self, statements: List[Union[LetStatement, IfStatement, WhileStatement, DoStatement, ReturnStatement]]) -> None:
@@ -258,7 +457,7 @@ class Statements:
             root.append(statement.toXMLElement())
         return root
     
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
         for statement in self.statements:
             statement.writeVMCodes(st, writer)    
 
@@ -342,7 +541,7 @@ class VarDec:
 
     def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
         for varName in self.identifiers:
-            st.define(varName, type, SymbolKind.VAR)
+            st.define(varName, self.type, SymbolKind.VAR)
 
 class SubroutineBody:
     def __init__(self, varDecList: List[VarDec], statements: Statements) -> None:
@@ -358,9 +557,12 @@ class SubroutineBody:
         root.append(symbolElement("}"))
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
-        for varDec in self.varDecList:
-            varDec.writeVMCodes(st, writer)
+    def getVarDecList(self) -> List[VarDec]:
+        return self.varDecList
+    
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
+        # for varDec in self.varDecList:
+        #     varDec.writeVMCodes(st, writer)
         self.statements.writeVMCodes(st, writer)
 
 class SubroutineDec:
@@ -392,20 +594,28 @@ class SubroutineDec:
         root.append(self.subroutineBody.toXMLElement())
         return root
 
-    def writeVMcodes(self, st: SymbolTable, writer: VMWriter) -> None:
+    def writeVMCodes(self, st: SymbolTable, writer: VMWriter) -> None:
         st.startSubroutine(self.identifier)
         if self.keyword == "method":
             st.define("this", st.className(), SymbolKind.ARGUMENT)
-
+            
         self.parameterList.writeVMCodes(st, writer)
+        
+        for varDec in self.subroutineBody.getVarDecList():
+            varDec.writeVMCodes(st, writer)
 
         writer.writeFunction(
-            f"{st.className()}.{st.subroutineName()}", st.varCount(SymbolKind.ARGUMENT)
+            f"{st.className()}.{st.subroutineName()}", st.varCount(SymbolKind.VAR)
         )
+
         if self.keyword == "method":
             writer.writePush(Segment.ARGUMENT, 0)
             writer.writePop(Segment.POINTER, 0)
-            
+        elif self.keyword == "constructor":
+            writer.writePush(Segment.CONST, st.varCount(SymbolKind.FIELD))
+            writer.writeCall("Memory.alloc", 1)
+            writer.writePop(Segment.POINTER, 0)
+
         self.subroutineBody.writeVMCodes(st, writer)
 
 
@@ -498,8 +708,8 @@ class CompilationEngine:
         self.tokenizer.advance()
 
         if self.tokenizer.tokenType() == "keyword":
-            assert self.tokenizer.keyword() == "void"
-            type = "void"
+            assert self.tokenizer.keyword() in ["void", "int", "char", "boolean"]
+            type = self.tokenizer.keyword()
         else:
             type = self.tokenizer.identifier()
         self.tokenizer.advance()
@@ -697,7 +907,7 @@ class CompilationEngine:
             op = self.tokenizer.symbol()
             self.tokenizer.advance()
             aterm = self.compileTerm()
-            additionalTerms.append(AdditionalTerm(op, aterm))
+            additionalTerms.append(AdditionalTerm(Operator(op), aterm))
 
         return Expression(term, additionalTerms)
 
@@ -720,7 +930,7 @@ class CompilationEngine:
             op = self.tokenizer.symbol()
             self.tokenizer.advance()
             nestedTerm = self.compileTerm()
-            term = Term(UnaryOpTerm(op, nestedTerm))
+            term = Term(UnaryOpTerm(UnaryOperator(op), nestedTerm))
         else:
             ident1 = self.tokenizer.identifier()
             self.tokenizer.advance()

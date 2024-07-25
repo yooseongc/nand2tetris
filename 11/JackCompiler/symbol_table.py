@@ -14,25 +14,25 @@ class SymbolKind(Enum):
 class Symbol:
 
     def __init__(self, name: str, type: str, kind: SymbolKind, index: int) -> None:
-        self.name: str = name
-        self.type: str = type
-        self.kind: SymbolKind = kind
-        self.index: int = index
+        self._name: str = name
+        self._type: str = type
+        self._kind: SymbolKind = kind
+        self._index: int = index
 
     def name(self) -> str:
-        return self.name
+        return self._name
 
     def type(self) -> str:
-        return self.type
-    
+        return self._type
+
     def kind(self) -> SymbolKind:
-        return self.kind
+        return self._kind
 
     def index(self) -> int:
-        return self.index
+        return self._index
 
     def __str__(self) -> str:
-        return f"Symbol[name={self.name}, type={self.type}, kind={self.kind.value}, index={self.index}]"
+        return f"Symbol[name={self._name}, type={self._type}, kind={self._kind.value}, index={self._index}]"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -87,7 +87,7 @@ class SymbolTable:
 
     def varCount(self, kind: SymbolKind) -> int:
         table = self.class_table if kind in [SymbolKind.STATIC, SymbolKind.FIELD] else self.subroutine_table
-        return len([symbol for symbol in table.items() if symbol.kind() == kind])
+        return len([symbol for symbol in table.values() if symbol.kind() == kind])
 
     def kindOf(self, name: str) -> SymbolKind:
         if self.subroutine_table.get(name) is None:

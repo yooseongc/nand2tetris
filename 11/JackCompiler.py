@@ -6,7 +6,7 @@ import shutil
 sys.path.append(os.getcwd())
 
 from typing import List
-from JackCompiler import CompilationEngine, VMWriter
+from JackCompiler import CompilationEngine
 
 def copy_os_vms(path: str):
 
@@ -47,7 +47,7 @@ def compile(path: str):
         raise IOError()
 
     for i in range(len(jack_files)):
-        print("jack file to tokenize: ")
+        print("jack file to compile: ")
         print(f"  {jack_files[i]}")
         print("vm out file: ")
         print(f"  {vm_files[i]}")

@@ -4,7 +4,7 @@ from typing import List
 from enum import Enum
 
 class Segment(Enum):
-    CONST = "const"
+    CONST = "constant"
     ARGUMENT = "argument"
     LOCAL = "local"
     STATIC = "static"
@@ -46,22 +46,22 @@ class VMWriter:
         self._write_line(f"pop {segment.value} {index}")
 
     def writeArithmetic(self, command: ArithmeticCommand) -> None:
-        pass
+        self._write_line(command.value)
 
     def writeLabel(self, label: str) -> None:
-        pass
+        self._write_line(f"label {label}")
 
     def writeGoto(self, label: str) -> None:
-        pass
+        self._write_line(f"goto {label}")
 
     def writeIf(self, label: str) -> None:
-        pass
+        self._write_line(f"if-goto {label}")
 
     def writeCall(self, name: str, nArgs: int) -> None:
-        pass
+        self._write_line(f"call {name} {nArgs}")
 
     def writeFunction(self, name: str, nLocals: int) -> None:
         self._write_line(f"function {name} {nLocals}")
 
     def writeReturn(self) -> None:
-        pass
+        self._write_line("return")
