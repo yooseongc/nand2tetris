@@ -744,7 +744,10 @@ class CompilationEngine:
         if self.tokenizer.isSymbol() and self.tokenizer.symbol() == ')':
             return ParameterList(parameters)
 
-        type = self.tokenizer.keyword()
+        if self.tokenizer.isKeyword():
+            type = self.tokenizer.keyword()
+        else:
+            type = self.tokenizer.identifier()
         self.tokenizer.advance()
         varName = self.tokenizer.identifier()
         parameters.append(Parameter(type, varName))
