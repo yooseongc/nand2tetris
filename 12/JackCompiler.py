@@ -69,7 +69,12 @@ if __name__ == '__main__':
         print(f"cannot find path: {path}")
         raise IOError()
 
-    path = os.path.abspath(path)
     
-    copy_os_vms(path)
+    path = os.path.abspath(path)
+
+    os_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "OS")
+    os_path = os.path.abspath(os_path)
+    if path != os_path:
+        copy_os_vms(path)
+        
     compile(path)
