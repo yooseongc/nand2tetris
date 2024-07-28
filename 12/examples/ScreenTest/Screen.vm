@@ -9,24 +9,20 @@ return
 function Screen.clearScreen 1
 push constant 0
 pop local 0
-label Screen.clearScreen.WHILE.16
+label Screen.clearScreen.WHILE.0
 push local 0
 push constant 8192
 lt
 not
-if-goto Screen.clearScreen.WHILE.17
+if-goto Screen.clearScreen.WHILE.1
 push constant 0
 push static 0
 push local 0
 add
 pop pointer 1
 pop that 0
-push local 0
-push constant 1
-add
-pop local 0
-goto Screen.clearScreen.WHILE.16
-label Screen.clearScreen.WHILE.17
+goto Screen.clearScreen.WHILE.0
+label Screen.clearScreen.WHILE.1
 push constant 0
 return
 function Screen.setColor 0
@@ -52,7 +48,7 @@ call Math.twoToThe 1
 pop local 1
 push static 1
 not
-if-goto Screen.drawPixel.IF.42
+if-goto Screen.drawPixel.IF.0
 push local 0
 push local 0
 call Memory.peek 1
@@ -60,8 +56,8 @@ push local 1
 or
 call Memory.poke 2
 pop temp 0
-goto Screen.drawPixel.IF.43
-label Screen.drawPixel.IF.42
+goto Screen.drawPixel.IF.1
+label Screen.drawPixel.IF.0
 push local 0
 push local 0
 call Memory.peek 1
@@ -70,7 +66,7 @@ not
 and
 call Memory.poke 2
 pop temp 0
-label Screen.drawPixel.IF.43
+label Screen.drawPixel.IF.1
 push constant 0
 return
 function Screen.drawLine 6
@@ -88,7 +84,7 @@ push local 1
 push constant 0
 eq
 not
-if-goto Screen.drawLine.IF.44
+if-goto Screen.drawLine.IF.2
 push argument 0
 push argument 2
 push argument 1
@@ -96,14 +92,14 @@ call Screen.drawHLine 3
 pop temp 0
 push constant 0
 return
-goto Screen.drawLine.IF.45
-label Screen.drawLine.IF.44
-label Screen.drawLine.IF.45
+goto Screen.drawLine.IF.3
+label Screen.drawLine.IF.2
+label Screen.drawLine.IF.3
 push local 0
 push constant 0
 eq
 not
-if-goto Screen.drawLine.IF.46
+if-goto Screen.drawLine.IF.4
 push argument 0
 push argument 1
 push argument 3
@@ -111,40 +107,40 @@ call Screen.drawVLine 3
 pop temp 0
 push constant 0
 return
-goto Screen.drawLine.IF.47
-label Screen.drawLine.IF.46
-label Screen.drawLine.IF.47
+goto Screen.drawLine.IF.5
+label Screen.drawLine.IF.4
+label Screen.drawLine.IF.5
 push argument 0
 push argument 2
 lt
 not
-if-goto Screen.drawLine.IF.48
+if-goto Screen.drawLine.IF.6
 push constant 1
 pop local 2
-goto Screen.drawLine.IF.49
-label Screen.drawLine.IF.48
+goto Screen.drawLine.IF.7
+label Screen.drawLine.IF.6
 push constant 1
 neg
 pop local 2
-label Screen.drawLine.IF.49
+label Screen.drawLine.IF.7
 push argument 1
 push argument 3
 lt
 not
-if-goto Screen.drawLine.IF.50
+if-goto Screen.drawLine.IF.8
 push constant 1
 pop local 3
-goto Screen.drawLine.IF.51
-label Screen.drawLine.IF.50
+goto Screen.drawLine.IF.9
+label Screen.drawLine.IF.8
 push constant 1
 neg
 pop local 3
-label Screen.drawLine.IF.51
+label Screen.drawLine.IF.9
 push local 0
 push local 1
 sub
 pop local 4
-label Screen.drawLine.WHILE.18
+label Screen.drawLine.WHILE.2
 push argument 0
 push argument 2
 eq
@@ -154,7 +150,7 @@ eq
 and
 not
 not
-if-goto Screen.drawLine.WHILE.19
+if-goto Screen.drawLine.WHILE.3
 push argument 0
 push argument 1
 call Screen.drawPixel 2
@@ -168,7 +164,7 @@ push local 1
 neg
 gt
 not
-if-goto Screen.drawLine.IF.52
+if-goto Screen.drawLine.IF.10
 push local 4
 push local 1
 sub
@@ -177,14 +173,14 @@ push argument 0
 push local 2
 add
 pop argument 0
-goto Screen.drawLine.IF.53
-label Screen.drawLine.IF.52
-label Screen.drawLine.IF.53
+goto Screen.drawLine.IF.11
+label Screen.drawLine.IF.10
+label Screen.drawLine.IF.11
 push local 5
 push local 0
 lt
 not
-if-goto Screen.drawLine.IF.54
+if-goto Screen.drawLine.IF.12
 push local 4
 push local 0
 add
@@ -193,15 +189,15 @@ push argument 1
 push local 3
 add
 pop argument 1
-goto Screen.drawLine.IF.55
-label Screen.drawLine.IF.54
-label Screen.drawLine.IF.55
+goto Screen.drawLine.IF.13
+label Screen.drawLine.IF.12
+label Screen.drawLine.IF.13
 push argument 0
 push argument 1
 call Screen.drawPixel 2
 pop temp 0
-goto Screen.drawLine.WHILE.18
-label Screen.drawLine.WHILE.19
+goto Screen.drawLine.WHILE.2
+label Screen.drawLine.WHILE.3
 push constant 0
 return
 function Screen.drawHLine 1
@@ -209,23 +205,23 @@ push argument 0
 push argument 1
 gt
 not
-if-goto Screen.drawHLine.IF.56
+if-goto Screen.drawHLine.IF.14
 push argument 0
 pop local 0
 push argument 1
 pop argument 0
 push local 0
 pop argument 1
-goto Screen.drawHLine.IF.57
-label Screen.drawHLine.IF.56
-label Screen.drawHLine.IF.57
-label Screen.drawHLine.WHILE.20
+goto Screen.drawHLine.IF.15
+label Screen.drawHLine.IF.14
+label Screen.drawHLine.IF.15
+label Screen.drawHLine.WHILE.4
 push argument 1
 push argument 0
 lt
 not
 not
-if-goto Screen.drawHLine.WHILE.21
+if-goto Screen.drawHLine.WHILE.5
 push argument 0
 push argument 2
 call Screen.drawPixel 2
@@ -234,8 +230,8 @@ push argument 0
 push constant 1
 add
 pop argument 0
-goto Screen.drawHLine.WHILE.20
-label Screen.drawHLine.WHILE.21
+goto Screen.drawHLine.WHILE.4
+label Screen.drawHLine.WHILE.5
 push constant 0
 return
 function Screen.drawVLine 1
@@ -243,23 +239,23 @@ push argument 1
 push argument 2
 gt
 not
-if-goto Screen.drawVLine.IF.58
+if-goto Screen.drawVLine.IF.16
 push argument 1
 pop local 0
 push argument 2
 pop argument 1
 push local 0
 pop argument 2
-goto Screen.drawVLine.IF.59
-label Screen.drawVLine.IF.58
-label Screen.drawVLine.IF.59
-label Screen.drawVLine.WHILE.22
+goto Screen.drawVLine.IF.17
+label Screen.drawVLine.IF.16
+label Screen.drawVLine.IF.17
+label Screen.drawVLine.WHILE.6
 push argument 2
 push argument 1
 lt
 not
 not
-if-goto Screen.drawVLine.WHILE.23
+if-goto Screen.drawVLine.WHILE.7
 push argument 0
 push argument 1
 call Screen.drawPixel 2
@@ -268,8 +264,8 @@ push argument 1
 push constant 1
 add
 pop argument 1
-goto Screen.drawVLine.WHILE.22
-label Screen.drawVLine.WHILE.23
+goto Screen.drawVLine.WHILE.6
+label Screen.drawVLine.WHILE.7
 push constant 0
 return
 function Screen.drawRectangle 0
@@ -277,21 +273,21 @@ push argument 1
 push argument 3
 gt
 not
-if-goto Screen.drawRectangle.IF.60
+if-goto Screen.drawRectangle.IF.18
 push argument 1
 push argument 3
 pop argument 1
 pop argument 3
-goto Screen.drawRectangle.IF.61
-label Screen.drawRectangle.IF.60
-label Screen.drawRectangle.IF.61
-label Screen.drawRectangle.WHILE.24
+goto Screen.drawRectangle.IF.19
+label Screen.drawRectangle.IF.18
+label Screen.drawRectangle.IF.19
+label Screen.drawRectangle.WHILE.8
 push argument 3
 push argument 1
 lt
 not
 not
-if-goto Screen.drawRectangle.WHILE.25
+if-goto Screen.drawRectangle.WHILE.9
 push argument 0
 push argument 2
 push argument 1
@@ -301,8 +297,8 @@ push argument 1
 push constant 1
 add
 pop argument 1
-goto Screen.drawRectangle.WHILE.24
-label Screen.drawRectangle.WHILE.25
+goto Screen.drawRectangle.WHILE.8
+label Screen.drawRectangle.WHILE.9
 push constant 0
 return
 function Screen.drawCircle 3
@@ -313,13 +309,13 @@ push argument 2
 push argument 2
 call Math.multiply 2
 pop local 2
-label Screen.drawCircle.WHILE.26
+label Screen.drawCircle.WHILE.10
 push local 1
 push argument 2
 gt
 not
 not
-if-goto Screen.drawCircle.WHILE.27
+if-goto Screen.drawCircle.WHILE.11
 push local 2
 push local 1
 push local 1
@@ -342,7 +338,7 @@ push local 1
 push constant 1
 add
 pop local 1
-goto Screen.drawCircle.WHILE.26
-label Screen.drawCircle.WHILE.27
+goto Screen.drawCircle.WHILE.10
+label Screen.drawCircle.WHILE.11
 push constant 0
 return

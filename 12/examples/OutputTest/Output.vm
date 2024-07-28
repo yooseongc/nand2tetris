@@ -1446,12 +1446,12 @@ push constant 126
 gt
 or
 not
-if-goto Output.getMap.IF.30
+if-goto Output.getMap.IF.0
 push constant 0
 pop argument 0
-goto Output.getMap.IF.31
-label Output.getMap.IF.30
-label Output.getMap.IF.31
+goto Output.getMap.IF.1
+label Output.getMap.IF.0
+label Output.getMap.IF.1
 push static 0
 push argument 0
 add
@@ -1485,12 +1485,12 @@ and
 pop local 2
 push constant 0
 pop local 4
-label Output.printChar.WHILE.12
+label Output.printChar.WHILE.0
 push local 4
 push constant 11
 lt
 not
-if-goto Output.printChar.WHILE.13
+if-goto Output.printChar.WHILE.1
 push local 0
 push local 4
 add
@@ -1501,7 +1501,7 @@ push local 2
 push constant 1
 eq
 not
-if-goto Output.printChar.IF.32
+if-goto Output.printChar.IF.2
 push local 3
 push constant 256
 call Math.multiply 2
@@ -1523,8 +1523,8 @@ push local 1
 add
 pop pointer 1
 pop that 0
-goto Output.printChar.IF.33
-label Output.printChar.IF.32
+goto Output.printChar.IF.3
+label Output.printChar.IF.2
 push static 3
 push local 1
 add
@@ -1539,7 +1539,7 @@ push local 1
 add
 pop pointer 1
 pop that 0
-label Output.printChar.IF.33
+label Output.printChar.IF.3
 push local 1
 push constant 32
 add
@@ -1548,36 +1548,36 @@ push local 4
 push constant 1
 add
 pop local 4
-goto Output.printChar.WHILE.12
-label Output.printChar.WHILE.13
+goto Output.printChar.WHILE.0
+label Output.printChar.WHILE.1
 push static 1
 push constant 63
 eq
 not
-if-goto Output.printChar.IF.34
+if-goto Output.printChar.IF.4
 call Output.println 0
 pop temp 0
-goto Output.printChar.IF.35
-label Output.printChar.IF.34
+goto Output.printChar.IF.5
+label Output.printChar.IF.4
 push static 2
 push static 1
 push constant 1
 add
 call Output.moveCursor 2
 pop temp 0
-label Output.printChar.IF.35
+label Output.printChar.IF.5
 push constant 0
 return
 function Output.printString 1
 push constant 0
 pop local 0
-label Output.printString.WHILE.14
+label Output.printString.WHILE.2
 push local 0
 push argument 0
 call String.length 1
 lt
 not
-if-goto Output.printString.WHILE.15
+if-goto Output.printString.WHILE.3
 push argument 0
 push local 0
 call String.charAt 2
@@ -1587,8 +1587,8 @@ push local 0
 push constant 1
 add
 pop local 0
-goto Output.printString.WHILE.14
-label Output.printString.WHILE.15
+goto Output.printString.WHILE.2
+label Output.printString.WHILE.3
 push constant 0
 return
 function Output.printInt 1
@@ -1612,20 +1612,20 @@ push static 2
 push constant 22
 lt
 not
-if-goto Output.println.IF.36
+if-goto Output.println.IF.6
 push static 2
 push constant 1
 add
 push constant 0
 call Output.moveCursor 2
 pop temp 0
-goto Output.println.IF.37
-label Output.println.IF.36
+goto Output.println.IF.7
+label Output.println.IF.6
 push constant 0
 push constant 0
 call Output.moveCursor 2
 pop temp 0
-label Output.println.IF.37
+label Output.println.IF.7
 push constant 0
 return
 function Output.backSpace 0
@@ -1633,30 +1633,30 @@ push static 1
 push constant 0
 eq
 not
-if-goto Output.backSpace.IF.38
+if-goto Output.backSpace.IF.8
 push static 2
 push constant 0
 eq
 not
 not
-if-goto Output.backSpace.IF.40
+if-goto Output.backSpace.IF.10
 push static 2
 push constant 1
 sub
 push constant 63
 call Output.moveCursor 2
 pop temp 0
-goto Output.backSpace.IF.41
-label Output.backSpace.IF.40
-label Output.backSpace.IF.41
-goto Output.backSpace.IF.39
-label Output.backSpace.IF.38
+goto Output.backSpace.IF.11
+label Output.backSpace.IF.10
+label Output.backSpace.IF.11
+goto Output.backSpace.IF.9
+label Output.backSpace.IF.8
 push static 2
 push static 1
 push constant 1
 sub
 call Output.moveCursor 2
 pop temp 0
-label Output.backSpace.IF.39
+label Output.backSpace.IF.9
 push constant 0
 return

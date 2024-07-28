@@ -36,6 +36,10 @@ class Math {
         return;
     }
 
+    function int twoToThe(int j) {
+        return powersOfTwo[j];
+    }
+
     function boolean bit(int x, int j) {
         return ~((x & powersOfTwo[j]) = 0);
     }
@@ -68,7 +72,7 @@ class Math {
         var boolean neg;
         var int q, result;
 
-        let neg = ~((x < 0) = (y < 0));
+        let neg = (x < 0 & y > 0) | (x > 0 & y < 0);
         let x = Math.abs(x);
         let y = Math.abs(y);
 
@@ -76,7 +80,11 @@ class Math {
             return 0;
         }
 
-        let q = Math.divide(x, y + y);
+        if ((y + y) < 0) {
+            let q = 0;  // y + y overflowed
+        } else {
+            let q = Math.divide(x, y + y);
+        }
         if ((x - (2 * q * y)) < y) {
             let result = q + q;
         } else {
@@ -130,9 +138,9 @@ class Math {
 
     /** Returns the absolute value of x. */
     function int abs(int x) {
-        if (x < 0) {
-            return -x;
+        if (x > 0) {
+            return x;
         }
-        return x;
+        return -x;
     }
 }

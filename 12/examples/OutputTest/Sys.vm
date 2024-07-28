@@ -14,58 +14,58 @@ pop temp 0
 call Sys.halt 0
 pop temp 0
 function Sys.halt 0
-label Sys.halt.WHILE.30
+label Sys.halt.WHILE.4
 push constant 0
 not
 not
-if-goto Sys.halt.WHILE.31
-goto Sys.halt.WHILE.30
-label Sys.halt.WHILE.31
+if-goto Sys.halt.WHILE.5
+goto Sys.halt.WHILE.4
+label Sys.halt.WHILE.5
 push constant 0
 return
 function Sys.wait 1
-label Sys.wait.WHILE.32
+label Sys.wait.WHILE.6
 push argument 0
 push constant 1000
 gt
 not
-if-goto Sys.wait.WHILE.33
-label Sys.wait.WHILE.34
+if-goto Sys.wait.WHILE.7
+label Sys.wait.WHILE.8
 push local 0
 push constant 1000
 push constant 20
 call Math.multiply 2
 lt
 not
-if-goto Sys.wait.WHILE.35
+if-goto Sys.wait.WHILE.9
 push local 0
 push constant 1
 add
 pop local 0
-goto Sys.wait.WHILE.34
-label Sys.wait.WHILE.35
+goto Sys.wait.WHILE.8
+label Sys.wait.WHILE.9
 push argument 0
 push constant 1000
 sub
 pop argument 0
-goto Sys.wait.WHILE.32
-label Sys.wait.WHILE.33
+goto Sys.wait.WHILE.6
+label Sys.wait.WHILE.7
 push constant 0
 pop local 0
-label Sys.wait.WHILE.36
+label Sys.wait.WHILE.10
 push local 0
 push argument 0
 push constant 20
 call Math.multiply 2
 lt
 not
-if-goto Sys.wait.WHILE.37
+if-goto Sys.wait.WHILE.11
 push local 0
 push constant 1
 add
 pop local 0
-goto Sys.wait.WHILE.36
-label Sys.wait.WHILE.37
+goto Sys.wait.WHILE.10
+label Sys.wait.WHILE.11
 push constant 0
 return
 function Sys.error 0

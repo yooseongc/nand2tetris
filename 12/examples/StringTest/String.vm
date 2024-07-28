@@ -6,12 +6,12 @@ push argument 0
 push constant 0
 eq
 not
-if-goto String.new.IF.62
+if-goto String.new.IF.0
 push constant 1
 pop argument 0
-goto String.new.IF.63
-label String.new.IF.62
-label String.new.IF.63
+goto String.new.IF.1
+label String.new.IF.0
+label String.new.IF.1
 push constant 0
 pop this 0
 push argument 0
@@ -61,7 +61,7 @@ push this 0
 push this 1
 lt
 not
-if-goto String.appendChar.IF.64
+if-goto String.appendChar.IF.2
 push argument 1
 push this 2
 push this 0
@@ -72,9 +72,9 @@ push this 0
 push constant 1
 add
 pop this 0
-goto String.appendChar.IF.65
-label String.appendChar.IF.64
-label String.appendChar.IF.65
+goto String.appendChar.IF.3
+label String.appendChar.IF.2
+label String.appendChar.IF.3
 push pointer 0
 return
 function String.eraseLastChar 0
@@ -84,14 +84,14 @@ push this 0
 push constant 0
 gt
 not
-if-goto String.eraseLastChar.IF.66
+if-goto String.eraseLastChar.IF.4
 push this 0
 push constant 1
 sub
 pop this 0
-goto String.eraseLastChar.IF.67
-label String.eraseLastChar.IF.66
-label String.eraseLastChar.IF.67
+goto String.eraseLastChar.IF.5
+label String.eraseLastChar.IF.4
+label String.eraseLastChar.IF.5
 push constant 0
 return
 function String.intValue 3
@@ -111,20 +111,20 @@ push constant 45
 eq
 and
 not
-if-goto String.intValue.IF.68
+if-goto String.intValue.IF.6
 push constant 0
 not
 pop local 2
 push constant 1
 pop local 1
-goto String.intValue.IF.69
-label String.intValue.IF.68
+goto String.intValue.IF.7
+label String.intValue.IF.6
 push constant 0
 pop local 2
 push constant 0
 pop local 1
-label String.intValue.IF.69
-label String.intValue.WHILE.28
+label String.intValue.IF.7
+label String.intValue.WHILE.0
 push local 1
 push this 0
 lt
@@ -137,7 +137,7 @@ not
 and
 and
 not
-if-goto String.intValue.WHILE.29
+if-goto String.intValue.WHILE.1
 push local 0
 push constant 10
 call Math.multiply 2
@@ -154,19 +154,19 @@ push local 1
 push constant 1
 add
 pop local 1
-goto String.intValue.WHILE.28
-label String.intValue.WHILE.29
+goto String.intValue.WHILE.0
+label String.intValue.WHILE.1
 push local 2
 not
-if-goto String.intValue.IF.70
+if-goto String.intValue.IF.8
 push local 0
 neg
 return
-goto String.intValue.IF.71
-label String.intValue.IF.70
+goto String.intValue.IF.9
+label String.intValue.IF.8
 push local 0
 return
-label String.intValue.IF.71
+label String.intValue.IF.9
 function String.setInt 0
 push argument 0
 pop pointer 0
@@ -176,7 +176,7 @@ push argument 1
 push constant 0
 lt
 not
-if-goto String.setInt.IF.72
+if-goto String.setInt.IF.10
 push argument 1
 neg
 pop argument 1
@@ -184,9 +184,9 @@ push pointer 0
 push constant 45
 call String.appendChar 2
 pop temp 0
-goto String.setInt.IF.73
-label String.setInt.IF.72
-label String.setInt.IF.73
+goto String.setInt.IF.11
+label String.setInt.IF.10
+label String.setInt.IF.11
 push pointer 0
 push argument 1
 call String.setIntRecur 2
@@ -200,15 +200,15 @@ push argument 1
 push constant 10
 lt
 not
-if-goto String.setIntRecur.IF.74
+if-goto String.setIntRecur.IF.12
 push pointer 0
 push argument 1
 push constant 48
 add
 call String.appendChar 2
 pop temp 0
-goto String.setIntRecur.IF.75
-label String.setIntRecur.IF.74
+goto String.setIntRecur.IF.13
+label String.setIntRecur.IF.12
 push argument 1
 push constant 10
 call Math.divide 2
@@ -227,7 +227,7 @@ push constant 48
 add
 call String.appendChar 2
 pop temp 0
-label String.setIntRecur.IF.75
+label String.setIntRecur.IF.13
 push constant 0
 return
 function String.newLine 0

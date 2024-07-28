@@ -44,22 +44,22 @@ return
 function Memory.alloc 3
 push static 1
 pop local 1
-label Memory.alloc.WHILE.10
+label Memory.alloc.WHILE.0
 push constant 0
 not
 not
-if-goto Memory.alloc.WHILE.11
+if-goto Memory.alloc.WHILE.1
 push local 1
 push constant 0
 eq
 not
-if-goto Memory.alloc.IF.20
+if-goto Memory.alloc.IF.4
 push constant 6
 call Sys.error 1
 pop temp 0
-goto Memory.alloc.IF.21
-label Memory.alloc.IF.20
-label Memory.alloc.IF.21
+goto Memory.alloc.IF.5
+label Memory.alloc.IF.4
+label Memory.alloc.IF.5
 push argument 0
 push static 0
 push local 1
@@ -70,7 +70,7 @@ push constant 1
 add
 lt
 not
-if-goto Memory.alloc.IF.22
+if-goto Memory.alloc.IF.6
 push static 0
 push local 1
 add
@@ -81,7 +81,7 @@ sub
 push constant 1
 gt
 not
-if-goto Memory.alloc.IF.24
+if-goto Memory.alloc.IF.8
 push local 1
 push argument 0
 add
@@ -126,11 +126,11 @@ push local 0
 push constant 0
 eq
 not
-if-goto Memory.alloc.IF.26
+if-goto Memory.alloc.IF.10
 push local 2
 pop static 1
-goto Memory.alloc.IF.27
-label Memory.alloc.IF.26
+goto Memory.alloc.IF.11
+label Memory.alloc.IF.10
 push local 2
 push static 0
 push local 0
@@ -139,14 +139,14 @@ add
 add
 pop pointer 1
 pop that 0
-label Memory.alloc.IF.27
-goto Memory.alloc.IF.25
-label Memory.alloc.IF.24
+label Memory.alloc.IF.11
+goto Memory.alloc.IF.9
+label Memory.alloc.IF.8
 push local 0
 push constant 0
 eq
 not
-if-goto Memory.alloc.IF.28
+if-goto Memory.alloc.IF.12
 push static 0
 push local 1
 push constant 1
@@ -155,8 +155,8 @@ add
 pop pointer 1
 push that 0
 pop static 1
-goto Memory.alloc.IF.29
-label Memory.alloc.IF.28
+goto Memory.alloc.IF.13
+label Memory.alloc.IF.12
 push static 0
 push local 1
 push constant 1
@@ -171,15 +171,15 @@ add
 add
 pop pointer 1
 pop that 0
-label Memory.alloc.IF.29
-label Memory.alloc.IF.25
+label Memory.alloc.IF.13
+label Memory.alloc.IF.9
 push local 1
 push constant 1
 add
 return
-goto Memory.alloc.IF.23
-label Memory.alloc.IF.22
-label Memory.alloc.IF.23
+goto Memory.alloc.IF.7
+label Memory.alloc.IF.6
+label Memory.alloc.IF.7
 push local 1
 pop local 0
 push static 0
@@ -190,8 +190,8 @@ add
 pop pointer 1
 push that 0
 pop local 1
-goto Memory.alloc.WHILE.10
-label Memory.alloc.WHILE.11
+goto Memory.alloc.WHILE.0
+label Memory.alloc.WHILE.1
 push constant 0
 return
 function Memory.deAlloc 0
